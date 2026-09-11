@@ -28,8 +28,27 @@ app.registerExtension({
                 return;
             }
 
-            widget.value = String(storedValue);
+            widget.value = nodeName === "ArtemKo7vUsefulStuffNodesRandomBoolean"
+                ? storedValue === true || String(storedValue).toLowerCase() === "true"
+                : String(storedValue);
             app.graph?.setDirtyCanvas?.(true, true);
         };
+    },
+});
+
+app.registerExtension({
+    name: "ArtemKo7v.UsefulStuffNodes.BooleanRandomReadOnly",
+    nodeCreated(node) {
+        if (node.constructor.type !== "ArtemKo7vUsefulStuffNodesRandomBoolean") {
+            return;
+        }
+
+        const widget = node.widgets?.find((item) => item.name === "last_value");
+        if (!widget) {
+            return;
+        }
+
+        widget.disabled = true;
+        widget.options = { ...widget.options, read_only: true };
     },
 });

@@ -90,13 +90,7 @@ class ArtemKo7vUsefulStuffNodesRandomBoolean:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "last_value": (
-                    "STRING",
-                    {
-                        "default": "false",
-                        "multiline": False,
-                    },
-                )
+                "last_value": ("BOOLEAN", {"default": False})
             }
         }
 
@@ -108,7 +102,7 @@ class ArtemKo7vUsefulStuffNodesRandomBoolean:
         saved_value = _parse_saved_bool(last_value)
         current_value = bool(secrets.randbelow(2))
         return {
-            "ui": {"stored_value": [str(current_value).lower()]},
+            "ui": {"stored_value": [current_value]},
             "result": (current_value, saved_value),
         }
 
