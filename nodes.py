@@ -113,11 +113,49 @@ class ArtemKo7vUsefulStuffNodesRandomBoolean:
         }
 
 
+class ArtemKo7vUsefulStuffNodesStringMatchSwitch:
+    CATEGORY = "ArtemKo7v"
+    RETURN_TYPES = ("*",)
+    RETURN_NAMES = ("selected",)
+    FUNCTION = "select"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "match": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": False,
+                    },
+                ),
+                "default": ("*",),
+            }
+        }
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, input_types):
+        return True
+
+    def select(self, match, default, **kwargs):
+        option_indexes = sorted(
+            int(name.removeprefix("value_"))
+            for name in kwargs
+            if name.startswith("value_") and name.removeprefix("value_").isdigit()
+        )
+        for index in option_indexes:
+            if str(kwargs.get(f"control_{index}", "")) == match:
+                return (kwargs[f"value_{index}"],)
+        return (default,)
+
+
 NODE_CLASS_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesEmptyString": ArtemKo7vUsefulStuffNodesEmptyString,
     "ArtemKo7vUsefulStuffNodesUnixTimestamp": ArtemKo7vUsefulStuffNodesUnixTimestamp,
     "ArtemKo7vUsefulStuffNodesRandomLongInt": ArtemKo7vUsefulStuffNodesRandomLongInt,
     "ArtemKo7vUsefulStuffNodesRandomBoolean": ArtemKo7vUsefulStuffNodesRandomBoolean,
+    "ArtemKo7vUsefulStuffNodesStringMatchSwitch": ArtemKo7vUsefulStuffNodesStringMatchSwitch,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -125,4 +163,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesUnixTimestamp": "Unix Timestamp",
     "ArtemKo7vUsefulStuffNodesRandomLongInt": "Random Long INT",
     "ArtemKo7vUsefulStuffNodesRandomBoolean": "Boolean Random",
+    "ArtemKo7vUsefulStuffNodesStringMatchSwitch": "String Match Switch",
 }
