@@ -41,13 +41,7 @@ class _ArtemKo7vStatefulIntBase:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "last_value": (
-                    "STRING",
-                    {
-                        "default": "0",
-                        "multiline": False,
-                    },
-                )
+                "last_value": ("INT", {"default": 0})
             }
         }
 
@@ -63,7 +57,7 @@ class _ArtemKo7vStatefulIntBase:
         saved_value = _parse_saved_int(last_value)
         current_value = self._new_value()
         return {
-            "ui": {"stored_value": [str(current_value)]},
+            "ui": {"stored_value": [current_value]},
             "result": (current_value, saved_value),
         }
 

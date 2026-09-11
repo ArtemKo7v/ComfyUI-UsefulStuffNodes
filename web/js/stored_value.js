@@ -30,16 +30,16 @@ app.registerExtension({
 
             widget.value = nodeName === "ArtemKo7vUsefulStuffNodesRandomBoolean"
                 ? storedValue === true || String(storedValue).toLowerCase() === "true"
-                : String(storedValue);
+                : Number(storedValue);
             app.graph?.setDirtyCanvas?.(true, true);
         };
     },
 });
 
 app.registerExtension({
-    name: "ArtemKo7v.UsefulStuffNodes.BooleanRandomReadOnly",
+    name: "ArtemKo7v.UsefulStuffNodes.StatefulValueReadOnly",
     nodeCreated(node) {
-        if (node.constructor.type !== "ArtemKo7vUsefulStuffNodesRandomBoolean") {
+        if (!STATEFUL_NODE_TYPES.has(node.constructor.type)) {
             return;
         }
 

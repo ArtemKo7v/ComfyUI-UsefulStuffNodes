@@ -10,7 +10,7 @@ Utility ComfyUI custom nodes that add a few small helpers for workflows.
 - **Boolean Random** — returns a random `BOOLEAN`: `true` or `false`. `current` is freshly generated on every execution. `saved` returns the value stored in the node before this execution; after execution, the new current value is written into `last_value` so it can be saved with the workflow.
 - **String Match Switch** — passes through the first connected option whose control string exactly equals `match`; otherwise it returns the required `default` input. Connecting an option adds the next option/control pair. Disconnected options never participate.
 
-The `last_value` widget is stored as text so large integers are preserved exactly in workflow JSON without JavaScript number precision loss, and boolean values persist reliably. On a newly created node, the initial saved value is `0` for integer nodes and `false` for Boolean Random.
+The `last_value` widget is a read-only native value: `INT` for integer nodes and `BOOLEAN` for Boolean Random. On a newly created node, the initial saved value is `0` for integer nodes and `false` for Boolean Random.
 
 ## Installation
 
