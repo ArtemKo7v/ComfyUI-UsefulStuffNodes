@@ -3,6 +3,7 @@ import { app } from "../../scripts/app.js";
 const STATEFUL_NODE_TYPES = new Set([
     "ArtemKo7vUsefulStuffNodesUnixTimestamp",
     "ArtemKo7vUsefulStuffNodesRandomLongInt",
+    "ArtemKo7vUsefulStuffNodesRandomBoolean",
 ]);
 
 app.registerExtension({

@@ -7,8 +7,9 @@ Utility ComfyUI custom nodes that add a few small helpers for workflows.
 - **Empty String** — returns an empty `STRING`.
 - **Unix Timestamp** — returns the current Unix timestamp as an `INT`. `current` is freshly generated on every execution. `saved` returns the value that was stored in the node before this execution; after execution, the new current value is written into `last_value` so it can be saved with the workflow.
 - **Random Long INT** — returns a large positive random `INT` in the signed 64-bit range. `current` is freshly generated on every execution. `saved` returns the value that was stored in the node before this execution; after execution, the new current value is written into `last_value` so it can be saved with the workflow.
+- **Boolean Random** — returns a random `BOOLEAN`: `true` or `false`. `current` is freshly generated on every execution. `saved` returns the value stored in the node before this execution; after execution, the new current value is written into `last_value` so it can be saved with the workflow.
 
-The `last_value` widget is stored as text so large integers are preserved exactly in workflow JSON without JavaScript number precision loss. On a newly created node, the initial saved value is `0`.
+The `last_value` widget is stored as text so large integers are preserved exactly in workflow JSON without JavaScript number precision loss, and boolean values persist reliably. On a newly created node, the initial saved value is `0` for integer nodes and `false` for Boolean Random.
 
 ## Installation
 
