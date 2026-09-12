@@ -150,12 +150,66 @@ class ArtemKo7vUsefulStuffNodesStringMatchSwitch:
         return (default,)
 
 
+class ArtemKo7vUsefulStuffNodesAnyInputSelector:
+    CATEGORY = "ArtemKo7v"
+    MAX_INPUT_INDEX = 64
+    RETURN_TYPES = ("*",)
+    RETURN_NAMES = ("selected",)
+    FUNCTION = "select"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        optional = {"selected_index": ("INT", {"default": -1})}
+        optional.update({f"any_{index}": ("*",) for index in range(2, cls.MAX_INPUT_INDEX + 1)})
+        return {"required": {"any_1": ("*",)}, "optional": optional}
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, input_types):
+        return True
+
+    def select(self, any_1, selected_index=None, **kwargs):
+        values = [any_1]
+        values.extend(kwargs[f"any_{index}"] for index in range(2, self.MAX_INPUT_INDEX + 1) if f"any_{index}" in kwargs)
+        selected = _parse_saved_int(selected_index)
+        if not 1 <= selected <= len(values):
+            selected = secrets.randbelow(len(values)) + 1
+        return (values[selected - 1],)
+
+
+class ArtemKo7vUsefulStuffNodesImageTextPairSelector:
+    CATEGORY = "ArtemKo7v"
+    MAX_PAIR_INDEX = 64
+    RETURN_TYPES = ("IMAGE", "STRING")
+    RETURN_NAMES = ("image", "text")
+    FUNCTION = "select"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        optional = {"selected_index": ("INT", {"default": -1}), "image_1": ("IMAGE",), "text_1": ("STRING",)}
+        for index in range(2, cls.MAX_PAIR_INDEX + 1):
+            optional[f"image_{index}"] = ("IMAGE",)
+            optional[f"text_{index}"] = ("STRING",)
+        return {"required": {}, "optional": optional}
+
+    def select(self, selected_index=None, **kwargs):
+        pair_indexes = sorted(int(name.removeprefix("image_")) for name in kwargs if name.startswith("image_") and name.removeprefix("image_").isdigit() and f"text_{name.removeprefix('image_')}" in kwargs)
+        if not pair_indexes:
+            raise ValueError("Connect an image/text pair before executing Image Text Pair Selector.")
+        selected = _parse_saved_int(selected_index)
+        if not 1 <= selected <= len(pair_indexes):
+            selected = secrets.randbelow(len(pair_indexes)) + 1
+        index = pair_indexes[selected - 1]
+        return (kwargs[f"image_{index}"], kwargs[f"text_{index}"])
+
+
 NODE_CLASS_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesEmptyString": ArtemKo7vUsefulStuffNodesEmptyString,
     "ArtemKo7vUsefulStuffNodesUnixTimestamp": ArtemKo7vUsefulStuffNodesUnixTimestamp,
     "ArtemKo7vUsefulStuffNodesRandomLongInt": ArtemKo7vUsefulStuffNodesRandomLongInt,
     "ArtemKo7vUsefulStuffNodesRandomBoolean": ArtemKo7vUsefulStuffNodesRandomBoolean,
     "ArtemKo7vUsefulStuffNodesStringMatchSwitch": ArtemKo7vUsefulStuffNodesStringMatchSwitch,
+    "ArtemKo7vUsefulStuffNodesAnyInputSelector": ArtemKo7vUsefulStuffNodesAnyInputSelector,
+    "ArtemKo7vUsefulStuffNodesImageTextPairSelector": ArtemKo7vUsefulStuffNodesImageTextPairSelector,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -164,4 +218,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesRandomLongInt": "Random Long INT",
     "ArtemKo7vUsefulStuffNodesRandomBoolean": "Boolean Random",
     "ArtemKo7vUsefulStuffNodesStringMatchSwitch": "String Match Switch",
+    "ArtemKo7vUsefulStuffNodesAnyInputSelector": "Any Input Selector",
+    "ArtemKo7vUsefulStuffNodesImageTextPairSelector": "Image Text Pair Selector",
 }
