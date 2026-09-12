@@ -3,6 +3,7 @@ import { app } from "../../scripts/app.js";
 const NODE_TYPE = "ArtemKo7vUsefulStuffNodesStringMatchSwitch";
 const VALUE_PREFIX = "value_";
 const CONTROL_PREFIX = "control_";
+const MAX_OPTION_INDEX = 64;
 
 function pairIndex(name) {
     const match = new RegExp(`^${VALUE_PREFIX}(\\d+)$`).exec(name ?? "");
@@ -83,7 +84,7 @@ function normalize(node) {
         }
 
         let last = nodePairs.at(-1);
-        if (last.input.link != null) {
+        if (last.input.link != null && last.index < MAX_OPTION_INDEX) {
             addPair(node, last.index + 1);
             nodePairs = pairs(node);
         }
@@ -111,7 +112,7 @@ function restorePairs(node, data) {
         .map((input) => pairIndex(input.name))
         .filter((index) => index !== null && index >= 2)
         .sort((left, right) => left - right);
-    const highestIndex = savedIndexes.at(-1) ?? 2;
+    const highestIndex = Math.min(savedIndexes.at(-1) ?? 2, MAX_OPTION_INDEX);
     for (let index = 2; index <= highestIndex; index += 1) {
         addPair(node, index);
     }
