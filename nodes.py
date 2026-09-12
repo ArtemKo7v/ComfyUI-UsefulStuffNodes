@@ -159,9 +159,10 @@ class ArtemKo7vUsefulStuffNodesAnyInputSelector:
 
     @classmethod
     def INPUT_TYPES(cls):
-        optional = {"selected_index": ("INT", {"default": -1})}
-        optional.update({f"any_{index}": ("*",) for index in range(2, cls.MAX_INPUT_INDEX + 1)})
-        return {"required": {"any_1": ("*",)}, "optional": optional}
+        return {
+            "required": {"any_1": ("*",)},
+            "optional": {"selected_index": ("INT", {"default": -1})},
+        }
 
     @classmethod
     def VALIDATE_INPUTS(cls, input_types):
@@ -185,11 +186,11 @@ class ArtemKo7vUsefulStuffNodesImageTextPairSelector:
 
     @classmethod
     def INPUT_TYPES(cls):
-        optional = {"selected_index": ("INT", {"default": -1}), "image_1": ("IMAGE",), "text_1": ("STRING",)}
-        for index in range(2, cls.MAX_PAIR_INDEX + 1):
-            optional[f"image_{index}"] = ("IMAGE",)
-            optional[f"text_{index}"] = ("STRING",)
-        return {"required": {}, "optional": optional}
+        return {"optional": {"selected_index": ("INT", {"default": -1})}}
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, input_types):
+        return True
 
     def select(self, selected_index=None, **kwargs):
         pair_indexes = sorted(int(name.removeprefix("image_")) for name in kwargs if name.startswith("image_") and name.removeprefix("image_").isdigit() and f"text_{name.removeprefix('image_')}" in kwargs)
