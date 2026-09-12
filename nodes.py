@@ -110,16 +110,6 @@ class ArtemKo7vUsefulStuffNodesStringMatchSwitch:
 
     @classmethod
     def INPUT_TYPES(cls):
-        optional = {}
-        for index in range(2, cls.MAX_OPTION_INDEX + 1):
-            optional[f"value_{index}"] = ("*",)
-            optional[f"control_{index}"] = (
-                "STRING",
-                {
-                    "default": "",
-                    "multiline": False,
-                },
-            )
         return {
             "required": {
                 "match": (
@@ -131,7 +121,6 @@ class ArtemKo7vUsefulStuffNodesStringMatchSwitch:
                 ),
                 "default": ("*",),
             },
-            "optional": optional,
         }
 
     @classmethod

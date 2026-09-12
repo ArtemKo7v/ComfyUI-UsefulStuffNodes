@@ -2,7 +2,7 @@
 [project]
 name = "comfyui-usefulstuffnodes"
 description = "Utility ComfyUI custom nodes that add some extra features for your workflows (random int for cli runs, unix timestamp, boolean random, string match switch, etc)."
-version = "0.0.9"
+version = "0.1.0"
 license = { text = "MIT" }
 dependencies  = []
 
