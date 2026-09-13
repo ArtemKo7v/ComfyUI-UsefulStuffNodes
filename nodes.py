@@ -232,7 +232,8 @@ class ArtemKo7vUsefulStuffNodesAnyMatchRouter:
     def route(self, any, match, **kwargs):
         result = [None] * self.MAX_OUTPUT_INDEX
         for index in range(1, self.MAX_OUTPUT_INDEX + 1):
-            if str(kwargs.get(f"text_{index}", "")) == match:
+            text = str(kwargs.get(f"text_{index}", ""))
+            if text and text == match:
                 result[index - 1] = any
                 break
         return tuple(result)
