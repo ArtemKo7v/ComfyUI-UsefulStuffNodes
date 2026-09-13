@@ -110,17 +110,16 @@ class ArtemKo7vUsefulStuffNodesStringMatchSwitch:
 
     @classmethod
     def INPUT_TYPES(cls):
+        optional = {}
+        for index in range(2, cls.MAX_OPTION_INDEX + 1):
+            optional[f"value_{index}"] = ("*",)
+            optional[f"control_{index}"] = ("STRING", {"default": "", "multiline": False})
         return {
             "required": {
-                "match": (
-                    "STRING",
-                    {
-                        "default": "",
-                        "multiline": False,
-                    },
-                ),
+                "match": ("STRING", {"default": "", "multiline": False}),
                 "default": ("*",),
             },
+            "optional": optional,
         }
 
     @classmethod
@@ -148,10 +147,9 @@ class ArtemKo7vUsefulStuffNodesAnyInputSelector:
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {
-            "required": {"any_1": ("*",)},
-            "optional": {"selected_index": ("INT", {"default": -1})},
-        }
+        optional = {"selected_index": ("INT", {"default": -1})}
+        optional.update({f"any_{index}": ("*",) for index in range(2, cls.MAX_INPUT_INDEX + 1)})
+        return {"required": {"any_1": ("*",)}, "optional": optional}
 
     @classmethod
     def VALIDATE_INPUTS(cls, input_types):
@@ -179,7 +177,11 @@ class ArtemKo7vUsefulStuffNodesImageTextPairSelector:
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {"optional": {"selected_index": ("INT", {"default": -1})}}
+        optional = {"selected_index": ("INT", {"default": -1})}
+        for index in range(1, cls.MAX_PAIR_INDEX + 1):
+            optional[f"image_{index}"] = ("IMAGE",)
+            optional[f"text_{index}"] = ("STRING", {"default": "", "multiline": False})
+        return {"required": {}, "optional": optional}
 
     @classmethod
     def VALIDATE_INPUTS(cls, input_types):

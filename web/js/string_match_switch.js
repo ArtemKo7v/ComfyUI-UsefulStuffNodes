@@ -21,6 +21,19 @@ function controlWidget(node, index) {
     return node.widgets?.find((widget) => widget.name === `${CONTROL_PREFIX}${index}`);
 }
 
+function resetDynamicPairs(node) {
+    for (let index = (node.inputs?.length ?? 0) - 1; index >= 0; index -= 1) {
+        if (pairIndex(node.inputs[index].name) !== null) {
+            node.removeInput(index);
+        }
+    }
+    for (let index = (node.widgets?.length ?? 0) - 1; index >= 0; index -= 1) {
+        if (node.widgets[index].name?.startsWith(CONTROL_PREFIX)) {
+            node.widgets.splice(index, 1);
+        }
+    }
+}
+
 function markDirty(node) {
     node.setSize?.(node.computeSize?.() ?? node.size);
     app.graph?.setDirtyCanvas?.(true, true);
@@ -150,6 +163,7 @@ app.registerExtension({
             markDirty(this);
         };
 
+        resetDynamicPairs(node);
         normalize(node);
     },
 });

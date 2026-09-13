@@ -30,8 +30,12 @@ function normalizePairs(n) {
     while (is.length > 1 && is.at(-1).input.link == null && ts.at(-1).input.link == null && is.at(-2).input.link == null && ts.at(-2).input.link == null) { n.removeInput(n.inputs.indexOf(ts.at(-1).input)); n.removeInput(n.inputs.indexOf(is.at(-1).input)); is = entries(n, "image_"); ts = entries(n, "text_"); }
 }
 function removeInputs(n, prefixes) {
+    const matches = name => prefixes.some(prefix => new RegExp(`^${prefix}\\d+$`).test(name ?? ""));
     for (let index = (n.inputs?.length ?? 0) - 1; index >= 0; index -= 1) {
-        if (prefixes.some(prefix => new RegExp(`^${prefix}\\d+$`).test(n.inputs[index].name ?? ""))) n.removeInput(index);
+        if (matches(n.inputs[index].name)) n.removeInput(index);
+    }
+    for (let index = (n.widgets?.length ?? 0) - 1; index >= 0; index -= 1) {
+        if (matches(n.widgets[index].name)) n.widgets.splice(index, 1);
     }
 }
 function restore(n, data, prefixes, create) {
