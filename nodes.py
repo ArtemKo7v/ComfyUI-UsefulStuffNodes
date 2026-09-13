@@ -202,6 +202,42 @@ class ArtemKo7vUsefulStuffNodesImageTextPairSelector:
         return (kwargs[f"image_{index}"], kwargs[f"text_{index}"])
 
 
+class ArtemKo7vUsefulStuffNodesAnyMatchRouter:
+    """Routes one value to the first output whose text exactly matches match."""
+
+    CATEGORY = "ArtemKo7v"
+    MAX_OUTPUT_INDEX = 64
+    RETURN_TYPES = ("*",) * MAX_OUTPUT_INDEX
+    RETURN_NAMES = tuple(f"any_out_{index}" for index in range(1, MAX_OUTPUT_INDEX + 1))
+    FUNCTION = "route"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        optional = {
+            f"text_{index}": ("STRING", {"default": "", "multiline": False})
+            for index in range(1, cls.MAX_OUTPUT_INDEX + 1)
+        }
+        return {
+            "required": {
+                "any": ("*",),
+                "match": ("STRING", {"default": "", "multiline": False}),
+            },
+            "optional": optional,
+        }
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, input_types):
+        return True
+
+    def route(self, any, match, **kwargs):
+        result = [None] * self.MAX_OUTPUT_INDEX
+        for index in range(1, self.MAX_OUTPUT_INDEX + 1):
+            if str(kwargs.get(f"text_{index}", "")) == match:
+                result[index - 1] = any
+                break
+        return tuple(result)
+
+
 NODE_CLASS_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesEmptyString": ArtemKo7vUsefulStuffNodesEmptyString,
     "ArtemKo7vUsefulStuffNodesUnixTimestamp": ArtemKo7vUsefulStuffNodesUnixTimestamp,
@@ -210,6 +246,7 @@ NODE_CLASS_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesStringMatchSwitch": ArtemKo7vUsefulStuffNodesStringMatchSwitch,
     "ArtemKo7vUsefulStuffNodesAnyInputSelector": ArtemKo7vUsefulStuffNodesAnyInputSelector,
     "ArtemKo7vUsefulStuffNodesImageTextPairSelector": ArtemKo7vUsefulStuffNodesImageTextPairSelector,
+    "ArtemKo7vUsefulStuffNodesAnyMatchRouter": ArtemKo7vUsefulStuffNodesAnyMatchRouter,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -220,4 +257,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesStringMatchSwitch": "String Match Switch",
     "ArtemKo7vUsefulStuffNodesAnyInputSelector": "Any Input Selector",
     "ArtemKo7vUsefulStuffNodesImageTextPairSelector": "Image Text Pair Selector",
+    "ArtemKo7vUsefulStuffNodesAnyMatchRouter": "Any Match Router",
 }
