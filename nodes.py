@@ -239,6 +239,29 @@ class ArtemKo7vUsefulStuffNodesAnyMatchRouter:
         return tuple(result)
 
 
+class ArtemKo7vUsefulStuffNodesAnySwitch:
+    CATEGORY = "ArtemKo7v"
+    RETURN_TYPES = ("*", "*")
+    RETURN_NAMES = ("any_out_1", "any_out_2")
+    FUNCTION = "switch"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "any": ("*",),
+                "enabled": ("BOOLEAN", {"default": True}),
+            }
+        }
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, input_types):
+        return True
+
+    def switch(self, any, enabled):
+        return (any, None) if enabled else (None, any)
+
+
 NODE_CLASS_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesEmptyString": ArtemKo7vUsefulStuffNodesEmptyString,
     "ArtemKo7vUsefulStuffNodesUnixTimestamp": ArtemKo7vUsefulStuffNodesUnixTimestamp,
@@ -248,6 +271,7 @@ NODE_CLASS_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesAnyInputSelector": ArtemKo7vUsefulStuffNodesAnyInputSelector,
     "ArtemKo7vUsefulStuffNodesImageTextPairSelector": ArtemKo7vUsefulStuffNodesImageTextPairSelector,
     "ArtemKo7vUsefulStuffNodesAnyMatchRouter": ArtemKo7vUsefulStuffNodesAnyMatchRouter,
+    "ArtemKo7vUsefulStuffNodesAnySwitch": ArtemKo7vUsefulStuffNodesAnySwitch,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -259,4 +283,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesAnyInputSelector": "Any Input Selector",
     "ArtemKo7vUsefulStuffNodesImageTextPairSelector": "Image Text Pair Selector",
     "ArtemKo7vUsefulStuffNodesAnyMatchRouter": "Any Match Router",
+    "ArtemKo7vUsefulStuffNodesAnySwitch": "Any Switch",
 }
