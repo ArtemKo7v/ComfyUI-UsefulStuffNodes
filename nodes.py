@@ -262,6 +262,30 @@ class ArtemKo7vUsefulStuffNodesAnySwitch:
         return (any, None) if enabled else (None, any)
 
 
+class ArtemKo7vUsefulStuffNodesAnyIfElse:
+    CATEGORY = "ArtemKo7v"
+    RETURN_TYPES = ("*",)
+    RETURN_NAMES = ("any_out",)
+    FUNCTION = "select"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "any_1": ("*",),
+                "any_2": ("*",),
+                "condition": ("BOOLEAN", {"default": True}),
+            }
+        }
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, input_types):
+        return True
+
+    def select(self, any_1, any_2, condition):
+        return (any_1 if condition else any_2,)
+
+
 NODE_CLASS_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesEmptyString": ArtemKo7vUsefulStuffNodesEmptyString,
     "ArtemKo7vUsefulStuffNodesUnixTimestamp": ArtemKo7vUsefulStuffNodesUnixTimestamp,
@@ -272,6 +296,7 @@ NODE_CLASS_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesImageTextPairSelector": ArtemKo7vUsefulStuffNodesImageTextPairSelector,
     "ArtemKo7vUsefulStuffNodesAnyMatchRouter": ArtemKo7vUsefulStuffNodesAnyMatchRouter,
     "ArtemKo7vUsefulStuffNodesAnySwitch": ArtemKo7vUsefulStuffNodesAnySwitch,
+    "ArtemKo7vUsefulStuffNodesAnyIfElse": ArtemKo7vUsefulStuffNodesAnyIfElse,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -284,4 +309,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ArtemKo7vUsefulStuffNodesImageTextPairSelector": "Image Text Pair Selector",
     "ArtemKo7vUsefulStuffNodesAnyMatchRouter": "Any Match Router",
     "ArtemKo7vUsefulStuffNodesAnySwitch": "Any Switch",
+    "ArtemKo7vUsefulStuffNodesAnyIfElse": "Any If Else",
 }
