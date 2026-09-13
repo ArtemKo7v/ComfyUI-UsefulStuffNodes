@@ -157,6 +157,10 @@ class ArtemKo7vUsefulStuffNodesAnyInputSelector:
     def VALIDATE_INPUTS(cls, input_types):
         return True
 
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        return float("nan")
+
     def select(self, any_1, selected_index=None, **kwargs):
         values = [any_1]
         values.extend(kwargs[f"any_{index}"] for index in range(2, self.MAX_INPUT_INDEX + 1) if f"any_{index}" in kwargs)
@@ -180,6 +184,10 @@ class ArtemKo7vUsefulStuffNodesImageTextPairSelector:
     @classmethod
     def VALIDATE_INPUTS(cls, input_types):
         return True
+
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        return float("nan")
 
     def select(self, selected_index=None, **kwargs):
         pair_indexes = sorted(int(name.removeprefix("image_")) for name in kwargs if name.startswith("image_") and name.removeprefix("image_").isdigit() and f"text_{name.removeprefix('image_')}" in kwargs)
