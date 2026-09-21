@@ -35,7 +35,8 @@ function resetDynamicPairs(node) {
 }
 
 function markDirty(node) {
-    node.setSize?.(node.computeSize?.() ?? node.size);
+    const size = node.computeSize?.() ?? node.size;
+    node.setSize?.([Math.max(node.size?.[0] ?? 0, size[0]), size[1]]);
     app.graph?.setDirtyCanvas?.(true, true);
 }
 
@@ -143,27 +144,34 @@ function restorePairs(node, data) {
 
 app.registerExtension({
     name: "ArtemKo7v.UsefulStuffNodes.StringMatchSwitch",
-    nodeCreated(node) {
-        if (node.constructor.type !== NODE_TYPE) {
-            return;
-        }
+    beforeRegisterNodeDef(nodeType, nodeData) {
+        if (nodeData.name !== NODE_TYPE) return;
 
-        const originalOnConfigure = node.onConfigure;
-        node.onConfigure = function (data) {
-            restorePairs(this, data);
-            originalOnConfigure?.apply(this, arguments);
-            restorePairs(this, data);
-            normalize(this);
+        const onNodeCreated = nodeType.prototype.onNodeCreated;
+        nodeType.prototype.onNodeCreated = function () {
+            const result = onNodeCreated?.apply(this, arguments);
+            const node = this;
+
+            const originalOnConfigure = node.onConfigure;
+            node.onConfigure = function (data) {
+                restorePairs(this, data);
+                originalOnConfigure?.apply(this, arguments);
+                restorePairs(this, data);
+                normalize(this);
+                markDirty(this);
+            };
+
+            const originalOnConnectionsChange = node.onConnectionsChange;
+            node.onConnectionsChange = function () {
+                originalOnConnectionsChange?.apply(this, arguments);
+                normalize(this);
+                markDirty(this);
+            };
+
+            resetDynamicPairs(node);
+            normalize(node);
+            markDirty(node);
+            return result;
         };
-
-        const originalOnConnectionsChange = node.onConnectionsChange;
-        node.onConnectionsChange = function () {
-            originalOnConnectionsChange?.apply(this, arguments);
-            normalize(this);
-            markDirty(this);
-        };
-
-        resetDynamicPairs(node);
-        normalize(node);
     },
 });

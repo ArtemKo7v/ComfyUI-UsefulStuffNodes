@@ -4,7 +4,11 @@ const ANY = "ArtemKo7vUsefulStuffNodesAnyInputSelector";
 const PAIRS = "ArtemKo7vUsefulStuffNodesImageTextPairSelector";
 const MATCH_ROUTER = "ArtemKo7vUsefulStuffNodesAnyMatchRouter";
 const MAX = 64;
-const dirty = n => { n.setSize?.(n.computeSize?.() ?? n.size); app.graph?.setDirtyCanvas?.(true, true); };
+const dirty = n => {
+    const size = n.computeSize?.() ?? n.size;
+    n.setSize?.([Math.max(n.size?.[0] ?? 0, size[0]), size[1]]);
+    app.graph?.setDirtyCanvas?.(true, true);
+};
 const entries = (n, p) => (n.inputs ?? []).map(input => ({ input, index: Number(new RegExp(`^${p}(\\d+)$`).exec(input.name ?? "")?.[1]) })).filter(x => Number.isInteger(x.index)).sort((a,b) => a.index-b.index);
 const add = (n, name, type) => { if (!n.inputs?.some(x => x.name === name)) n.addInput(name, type); };
 const type = (n, input) => {
@@ -44,9 +48,9 @@ function restore(n, data, prefixes, create) {
     for (let i = 1; i <= Math.min(Math.max(1, ...indexes), MAX); i++) create(n, i);
 }
 function install(n, normalize, restoreInputs, reset) {
-    const configured = n.onConfigure; n.onConfigure = function(data) { restoreInputs(this, data); configured?.apply(this, arguments); restoreInputs(this, data); normalize(this); };
+    const configured = n.onConfigure; n.onConfigure = function(data) { restoreInputs(this, data); configured?.apply(this, arguments); restoreInputs(this, data); normalize(this); dirty(this); };
     const changed = n.onConnectionsChange; n.onConnectionsChange = function() { changed?.apply(this, arguments); normalize(this); dirty(this); };
-    reset?.(n); normalize(n);
+    reset?.(n); normalize(n); dirty(n);
 }
 
 const routerIndex = (name, prefix) => {
@@ -96,12 +100,14 @@ function normalizeRouter(n) {
         n.__anyMatchRouterUpdating = false;
     }
 }
-function resetRouter(n) {
+function resetRouter(n, resetOutputs = true) {
     for (let index = (n.widgets?.length ?? 0) - 1; index >= 0; index -= 1) {
         if (routerIndex(n.widgets[index].name, "text_") !== null) n.widgets.splice(index, 1);
     }
-    for (let index = (n.outputs?.length ?? 0) - 1; index >= 0; index -= 1) {
-        if (routerIndex(n.outputs[index].name, "any_out_") !== null) n.removeOutput(index);
+    if (resetOutputs) {
+        for (let index = (n.outputs?.length ?? 0) - 1; index >= 0; index -= 1) {
+            if (routerIndex(n.outputs[index].name, "any_out_") !== null) n.removeOutput(index);
+        }
     }
 }
 function restoreRouter(n, data) {
@@ -120,12 +126,13 @@ function restoreRouter(n, data) {
 function installRouter(n) {
     const configured = n.onConfigure;
     n.onConfigure = function(data) {
-        n.__anyMatchRouterConfigured = true;
-        resetRouter(this);
+        // The graph has already restored output links before onConfigure.
+        resetRouter(this, false);
         restoreRouter(this, data);
         normalizeRouter(this);
         configured?.apply(this, arguments);
         normalizeRouter(this);
+        dirty(this);
     };
     const changed = n.onConnectionsChange;
     n.onConnectionsChange = function() {
@@ -135,17 +142,22 @@ function installRouter(n) {
     };
     resetRouter(n);
     normalizeRouter(n);
-    setTimeout(() => {
-        if (!n.__anyMatchRouterConfigured) {
-            resetRouter(n);
-            normalizeRouter(n);
-            dirty(n);
-        }
-    }, 0);
+    dirty(n);
 }
 
-app.registerExtension({ name: "ArtemKo7v.UsefulStuffNodes.DynamicSelectors", nodeCreated(n) {
-    if (n.constructor.type === ANY) install(n, normalizeAny, (x,d) => restore(x,d,["any_"], (node,i) => add(node, `any_${i}`, "*")), node => removeInputs(node, ["any_"]));
-    if (n.constructor.type === PAIRS) install(n, normalizePairs, (x,d) => restore(x,d,["image_", "text_"], addPair), node => removeInputs(node, ["image_", "text_"]));
-    if (n.constructor.type === MATCH_ROUTER) installRouter(n);
-}});
+app.registerExtension({
+    name: "ArtemKo7v.UsefulStuffNodes.DynamicSelectors",
+    beforeRegisterNodeDef(nodeType, nodeData) {
+        if (![ANY, PAIRS, MATCH_ROUTER].includes(nodeData.name)) return;
+        // Preview nodes also run onNodeCreated, but may skip the app's
+        // nodeCreated extension hook. Normalize before their size is used.
+        const onNodeCreated = nodeType.prototype.onNodeCreated;
+        nodeType.prototype.onNodeCreated = function() {
+            const result = onNodeCreated?.apply(this, arguments);
+            if (nodeData.name === ANY) install(this, normalizeAny, (x,d) => restore(x,d,["any_"], (node,i) => add(node, `any_${i}`, "*")), node => removeInputs(node, ["any_"]));
+            if (nodeData.name === PAIRS) install(this, normalizePairs, (x,d) => restore(x,d,["image_", "text_"], addPair), node => removeInputs(node, ["image_", "text_"]));
+            if (nodeData.name === MATCH_ROUTER) installRouter(this);
+            return result;
+        };
+    },
+});
