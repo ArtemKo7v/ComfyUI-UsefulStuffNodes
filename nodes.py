@@ -1,5 +1,6 @@
 import secrets
 import time
+from threading import Lock
 
 
 INT64_MAX = (1 << 63) - 1
@@ -145,6 +146,10 @@ class ArtemKo7vUsefulStuffNodesAnyInputSelector:
     RETURN_NAMES = ("selected",)
     FUNCTION = "select"
 
+    # Keep only cycle metadata, never the connected input values.
+    _cycle_states = {}
+    _cycle_lock = Lock()
+
     def __init__(self):
         self._cycle_key = None
         self._cycle_index = 0
@@ -159,7 +164,11 @@ class ArtemKo7vUsefulStuffNodesAnyInputSelector:
             "mode": (["fixed", "random", "increment", "decrement"], {"default": "fixed"}),
         }
         optional.update({f"any_{index}": ("*",) for index in range(2, cls.MAX_INPUT_INDEX + 1)})
-        return {"required": {"any_1": ("*",)}, "optional": optional}
+        return {
+            "required": {"any_1": ("*",)},
+            "optional": optional,
+            "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"},
+        }
 
     @classmethod
     def VALIDATE_INPUTS(cls, input_types):
@@ -169,30 +178,46 @@ class ArtemKo7vUsefulStuffNodesAnyInputSelector:
     def IS_CHANGED(cls, **kwargs):
         return float("nan")
 
-    def select(self, any_1, selected_index=None, mode="fixed", **kwargs):
+    def select(self, any_1, selected_index=None, mode="fixed", unique_id=None, extra_pnginfo=None, **kwargs):
         if mode not in ("fixed", "random", "increment", "decrement"):
             raise ValueError(f"Unknown Any Input Selector mode: {mode}")
 
         input_names = tuple(f"any_{index}" for index in range(2, self.MAX_INPUT_INDEX + 1) if f"any_{index}" in kwargs)
         values = [any_1, *(kwargs[name] for name in input_names)]
         selected = _parse_saved_int(selected_index)
-        if mode in ("increment", "decrement"):
-            # Keep progress on the node instance, including for queued/API runs
-            # whose submitted selected_index remains unchanged.
-            cycle_key = (mode, selected, input_names)
-            if cycle_key == self._cycle_key:
-                step = 1 if mode == "increment" else -1
-                selected = (self._cycle_index - 1 + step) % len(values) + 1
-            elif not 1 <= selected <= len(values):
-                selected = 1
-            self._cycle_key = cycle_key
-            self._cycle_index = selected
-        else:
-            self._cycle_key = None
-            # Preserve the legacy random fallback for workflows with index -1
-            # (or any other missing/out-of-range index) in fixed mode.
-            if mode == "random" or not 1 <= selected <= len(values):
-                selected = secrets.randbelow(len(values)) + 1
+        workflow = (extra_pnginfo or {}).get("workflow") or {}
+        workflow_id = workflow.get("id")
+        state_id = (
+            (str(workflow_id) if workflow_id is not None else None, str(unique_id))
+            if unique_id is not None else None
+        )
+        with self._cycle_lock:
+            if mode in ("increment", "decrement"):
+                cycle_key = (mode, selected, input_names)
+                previous_key, previous_index = (
+                    self._cycle_states.get(state_id, (None, 0))
+                    if state_id is not None else (self._cycle_key, self._cycle_index)
+                )
+                if cycle_key == previous_key:
+                    step = 1 if mode == "increment" else -1
+                    selected = (previous_index - 1 + step) % len(values) + 1
+                elif not 1 <= selected <= len(values):
+                    selected = 1
+                if state_id is not None:
+                    self._cycle_states[state_id] = (cycle_key, selected)
+                else:
+                    # Direct Python callers without a graph ID keep local state.
+                    self._cycle_key = cycle_key
+                    self._cycle_index = selected
+            else:
+                if state_id is not None:
+                    self._cycle_states.pop(state_id, None)
+                else:
+                    self._cycle_key = None
+                # Preserve the legacy random fallback for workflows with index -1
+                # (or any other missing/out-of-range index) in fixed mode.
+                if mode == "random" or not 1 <= selected <= len(values):
+                    selected = secrets.randbelow(len(values)) + 1
         return (values[selected - 1],)
 
 

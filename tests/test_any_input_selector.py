@@ -105,5 +105,71 @@ class AnyInputSelectorTests(unittest.TestCase):
             self.select(mode="typo")
 
 
+class AnyInputSelectorRecreatedInstanceTests(unittest.TestCase):
+    def setUp(self):
+        states = patch.object(Selector, "_cycle_states", {})
+        states.start()
+        self.addCleanup(states.stop)
+        self.node_id = "selector"
+        self.inputs = {"any_1": "A", "any_3": "B", "any_64": "C"}
+
+    def execute(self, mode="increment", index=1, node_id=None, workflow_id=None):
+        # Each execution gets a fresh Python object but the same graph node ID.
+        return Selector().select(
+            **self.inputs,
+            selected_index=index,
+            mode=mode,
+            unique_id=node_id or self.node_id,
+            extra_pnginfo={"workflow": {"id": workflow_id}} if workflow_id else None,
+        )[0]
+
+    def test_cycle_survives_instance_recreation_without_workflow_metadata(self):
+        for mode, expected in (
+            ("increment", ["B", "C", "A", "B", "C", "A", "B"]),
+            ("decrement", ["B", "A", "C", "B", "A", "C", "B"]),
+        ):
+            with self.subTest(mode=mode):
+                self.assertEqual([self.execute(mode, 2) for _ in range(7)], expected)
+
+    def test_hidden_inputs_provide_stable_identity(self):
+        hidden = Selector.INPUT_TYPES().get("hidden", {})
+        self.assertEqual(hidden.get("unique_id"), "UNIQUE_ID")
+        self.assertEqual(hidden.get("extra_pnginfo"), "EXTRA_PNGINFO")
+
+    def test_different_node_ids_have_independent_progress(self):
+        self.assertEqual(self.execute(), "A")
+        self.assertEqual(self.execute(node_id=self.node_id + "-other"), "A")
+        self.assertEqual(self.execute(), "B")
+
+    def test_same_node_id_in_different_workflows_has_independent_progress(self):
+        self.assertEqual(self.execute(workflow_id="first"), "A")
+        self.assertEqual(self.execute(workflow_id="second"), "A")
+        self.assertEqual(self.execute(workflow_id="first"), "B")
+        self.assertEqual(self.execute(workflow_id="second"), "B")
+
+    def test_changing_start_or_slots_restarts_shared_cycle(self):
+        self.assertEqual(self.execute(), "A")
+        self.assertEqual(self.execute(), "B")
+        self.assertEqual(self.execute(index=3), "C")
+        self.assertEqual(self.execute(index=3), "A")
+        self.inputs["any_2"] = self.inputs.pop("any_3")
+        self.assertEqual(self.execute(index=3), "C")
+
+    def test_fixed_and_random_reset_shared_cycle(self):
+        for mode in ("fixed", "random"):
+            with self.subTest(mode=mode):
+                self.assertEqual(self.execute(index=2), "B")
+                self.assertEqual(self.execute(index=2), "C")
+                self.execute(mode)
+                self.assertEqual(self.execute(index=2), "B")
+                self.execute("fixed")
+
+    def test_changed_values_do_not_reset_or_reuse_old_input_objects(self):
+        self.assertEqual(self.execute(), "A")
+        replacement = object()
+        self.inputs["any_3"] = replacement
+        self.assertIs(self.execute(), replacement)
+
+
 if __name__ == "__main__":
     unittest.main()
