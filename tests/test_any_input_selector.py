@@ -12,13 +12,13 @@ class AnyInputSelectorTests(unittest.TestCase):
         self.values = list(self.inputs.values())
 
     def select(self, index=1, mode="fixed"):
-        return self.node.select(**self.inputs, selected_index=index, mode=mode)[0]
+        return self.node.select(**self.inputs, selected_index=index, mode=mode)["result"][0]
 
     def test_new_node_defaults_to_fixed_first_input(self):
         schema = Selector.INPUT_TYPES()["optional"]
         self.assertEqual(schema["mode"][1]["default"], "fixed")
         self.assertEqual(schema["selected_index"][1]["default"], 1)
-        self.assertIs(self.node.select(**self.inputs, selected_index=1)[0], self.values[0])
+        self.assertIs(self.node.select(**self.inputs, selected_index=1)["result"][0], self.values[0])
 
     def test_fixed_uses_connected_input_order_and_preserves_identity(self):
         for index, value in enumerate(self.values, 1):
@@ -29,7 +29,7 @@ class AnyInputSelectorTests(unittest.TestCase):
         for index in (None, -1, 0, 4):
             with self.subTest(index=index), patch("nodes.secrets.randbelow", return_value=2) as random:
                 result = self.node.select(**self.inputs, selected_index=index)
-                self.assertIs(result[0], self.values[2])
+                self.assertIs(result["result"][0], self.values[2])
                 random.assert_called_once_with(3)
 
     def test_random_ignores_index_and_selects_on_every_execution(self):
@@ -52,13 +52,13 @@ class AnyInputSelectorTests(unittest.TestCase):
             for index in (None, -1, 0, 4):
                 with self.subTest(mode=mode, index=index):
                     node = Selector()
-                    self.assertIs(node.select(**self.inputs, selected_index=index, mode=mode)[0], self.values[0])
+                    self.assertIs(node.select(**self.inputs, selected_index=index, mode=mode)["result"][0], self.values[0])
 
     def test_single_input_stays_selected_in_all_modes(self):
         value = object()
         for mode in ("fixed", "random", "increment", "decrement"):
             for _ in range(3):
-                self.assertIs(self.node.select(value, 1, mode)[0], value)
+                self.assertIs(self.node.select(value, 1, mode)["result"][0], value)
 
     def test_changing_start_index_restarts_cycle(self):
         self.select(1, "increment")
@@ -93,7 +93,7 @@ class AnyInputSelectorTests(unittest.TestCase):
     def test_instances_have_independent_progress(self):
         self.select(1, "increment")
         other = Selector()
-        self.assertIs(other.select(**self.inputs, selected_index=1, mode="increment")[0], self.values[0])
+        self.assertIs(other.select(**self.inputs, selected_index=1, mode="increment")["result"][0], self.values[0])
         self.assertIs(self.select(1, "increment"), self.values[1])
 
     def test_execution_cache_is_invalidated(self):
@@ -103,6 +103,28 @@ class AnyInputSelectorTests(unittest.TestCase):
     def test_unknown_mode_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Unknown Any Input Selector mode"):
             self.select(mode="typo")
+
+    def test_reported_index_matches_output_in_all_modes(self):
+        for mode in ("fixed", "random", "increment", "decrement"):
+            for _ in range(7):
+                result = self.node.select(**self.inputs, selected_index=2, mode=mode)
+                index = result["ui"]["selected_index"][0]
+                self.assertIs(result["result"][0], self.values[index - 1])
+
+    def test_random_fallback_reports_actual_index(self):
+        with patch("nodes.secrets.randbelow", return_value=2):
+            result = self.node.select(**self.inputs, selected_index=-1)
+        self.assertEqual(result["ui"]["selected_index"], [3])
+        self.assertIs(result["result"][0], self.values[2])
+
+    def test_feedback_continues_cycle_on_same_instance(self):
+        index = 2
+        indexes = []
+        for _ in range(7):
+            result = self.node.select(**self.inputs, selected_index=index, mode="increment")
+            index = result["ui"]["selected_index"][0]
+            indexes.append(index)
+        self.assertEqual(indexes, [2, 3, 1, 2, 3, 1, 2])
 
 
 class AnyInputSelectorRecreatedInstanceTests(unittest.TestCase):
@@ -121,7 +143,7 @@ class AnyInputSelectorRecreatedInstanceTests(unittest.TestCase):
             mode=mode,
             unique_id=node_id or self.node_id,
             extra_pnginfo={"workflow": {"id": workflow_id}} if workflow_id else None,
-        )[0]
+        )["result"][0]
 
     def test_cycle_survives_instance_recreation_without_workflow_metadata(self):
         for mode, expected in (
@@ -169,6 +191,40 @@ class AnyInputSelectorRecreatedInstanceTests(unittest.TestCase):
         replacement = object()
         self.inputs["any_3"] = replacement
         self.assertIs(self.execute(), replacement)
+
+    def test_feedback_continues_cycle_across_instances(self):
+        for mode, expected in (
+            ("increment", [2, 3, 1, 2, 3, 1, 2]),
+            ("decrement", [2, 1, 3, 2, 1, 3, 2]),
+        ):
+            index = 2
+            indexes = []
+            for _ in range(7):
+                result = Selector().select(
+                    **self.inputs, selected_index=index, mode=mode, unique_id=self.node_id,
+                )
+                index = result["ui"]["selected_index"][0]
+                indexes.append(index)
+                self.assertEqual(result["result"][0], list(self.inputs.values())[index - 1])
+            self.assertEqual(indexes, expected)
+
+    def test_manual_edit_back_to_original_start_restarts_cycle(self):
+        workflow = {"id": "workflow", "nodes": [{"id": self.node_id, "properties": {}}]}
+        def execute(index):
+            return Selector().select(
+                **self.inputs, selected_index=index, mode="increment", unique_id=self.node_id,
+                extra_pnginfo={"workflow": workflow},
+            )["ui"]["selected_index"][0]
+        self.assertEqual(execute(1), 1)
+        self.assertEqual(execute(1), 2)
+        self.assertEqual(execute(2), 3)
+        workflow["nodes"][0]["properties"]["usefulstuff_index_revision"] = 1
+        self.assertEqual(execute(1), 1)
+        self.assertEqual(execute(1), 2)
+
+    def test_queued_original_index_still_continues_after_ui_feedback(self):
+        results = [self.execute(index=index) for index in (1, 1, 2, 1, 1, 1)]
+        self.assertEqual(results, ["A", "B", "C", "A", "B", "C"])
 
 
 if __name__ == "__main__":

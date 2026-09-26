@@ -64,6 +64,7 @@ function create(kind) {
         onNodeCreated() { this.created++; return "original result"; }
         onConfigure() { this.configured++; }
         onConnectionsChange() { this.connectionsChanged++; }
+        onExecuted(message) { this.lastExecution = message; }
         addInput(name, type) { this.inputs.push({ name, type, link: null }); }
         removeInput(index) { this.inputs.splice(index, 1); }
         addOutput(name, type) { this.outputs.push({ name, type, links: null }); }
@@ -150,6 +151,36 @@ test("Any Input Selector grows, shrinks, and propagates linked types", () => {
     assert.deepEqual(names(node.inputs), ["any_1", "any_2"]);
     assert.equal(node.connectionsChanged, 3);
     assertHeight(node);
+});
+
+test("Any Input Selector displays execution feedback without registering a manual edit", () => {
+    const node = create("AnyInputSelector");
+    const widget = node.widgets.find(widget => widget.name === "selected_index");
+    for (const index of [1, 2, 3, 1, 3]) {
+        const message = { selected_index: [index] };
+        node.onExecuted(message);
+        assert.equal(widget.value, index);
+        assert.equal(node.lastExecution, message);
+        assert.equal(node.properties?.usefulstuff_index_revision ?? 0, 0);
+    }
+    edit(node, "selected_index", 2);
+    assert.equal(node.properties.usefulstuff_index_revision, 1);
+    node.onExecuted({ selected_index: [3] });
+    assert.equal(widget.value, 3);
+    assert.equal(node.properties.usefulstuff_index_revision, 1);
+    edit(node, "selected_index", 1);
+    assert.equal(node.properties.usefulstuff_index_revision, 2);
+});
+
+test("Any Input Selector uses the last reported index and ignores missing or invalid feedback", () => {
+    const node = create("AnyInputSelector");
+    const widget = node.widgets.find(widget => widget.name === "selected_index");
+    node.onExecuted({ selected_index: [1, 3, 2] });
+    assert.equal(widget.value, 2);
+    for (const message of [undefined, {}, { selected_index: [] }, { selected_index: [0] }, { selected_index: [65] }]) {
+        node.onExecuted(message);
+        assert.equal(widget.value, 2);
+    }
 });
 
 test("Image Text Pair Selector grows and shrinks in pairs", () => {

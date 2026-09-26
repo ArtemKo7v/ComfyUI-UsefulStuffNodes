@@ -159,7 +159,7 @@ class ArtemKo7vUsefulStuffNodesAnyInputSelector:
         optional = {
             "selected_index": ("INT", {
                 "default": 1,
-                "tooltip": "1-based position among connected inputs. Starting position for increment/decrement; ignored in random mode.",
+                "tooltip": "1-based position among connected inputs. Updated after execution to match the output. Edit to restart increment/decrement at this position; ignored in random mode.",
             }),
             "mode": (["fixed", "random", "increment", "decrement"], {"default": "fixed"}),
         }
@@ -187,20 +187,31 @@ class ArtemKo7vUsefulStuffNodesAnyInputSelector:
         selected = _parse_saved_int(selected_index)
         workflow = (extra_pnginfo or {}).get("workflow") or {}
         workflow_id = workflow.get("id")
+        # Frontend edits increment this revision; execution feedback does not.
+        index_revision = next((
+            (node.get("properties") or {}).get("usefulstuff_index_revision", 0)
+            for node in workflow.get("nodes", [])
+            if str(node.get("id")) == str(unique_id)
+        ), 0)
         state_id = (
             (str(workflow_id) if workflow_id is not None else None, str(unique_id))
             if unique_id is not None else None
         )
         with self._cycle_lock:
             if mode in ("increment", "decrement"):
-                cycle_key = (mode, selected, input_names)
+                cycle_key = (mode, selected, input_names, index_revision)
                 previous_key, previous_index = (
                     self._cycle_states.get(state_id, (None, 0))
                     if state_id is not None else (self._cycle_key, self._cycle_index)
                 )
-                if cycle_key == previous_key:
+                if (previous_key is not None
+                        and cycle_key[0] == previous_key[0]
+                        and cycle_key[2:] == previous_key[2:]
+                        and selected in (previous_key[1], previous_index)):
                     step = 1 if mode == "increment" else -1
                     selected = (previous_index - 1 + step) % len(values) + 1
+                    # Accept both UI feedback and unchanged queued/API inputs.
+                    cycle_key = previous_key
                 elif not 1 <= selected <= len(values):
                     selected = 1
                 if state_id is not None:
@@ -218,7 +229,7 @@ class ArtemKo7vUsefulStuffNodesAnyInputSelector:
                 # (or any other missing/out-of-range index) in fixed mode.
                 if mode == "random" or not 1 <= selected <= len(values):
                     selected = secrets.randbelow(len(values)) + 1
-        return (values[selected - 1],)
+        return {"ui": {"selected_index": [selected]}, "result": (values[selected - 1],)}
 
 
 class ArtemKo7vUsefulStuffNodesImageTextPairSelector:

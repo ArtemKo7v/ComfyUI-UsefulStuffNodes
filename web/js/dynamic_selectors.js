@@ -16,6 +16,25 @@ const type = (n, input) => {
     const link = n.getInputLink?.(n.inputs.indexOf(input)) ?? n.graph?.links?.[input.link] ?? n.graph?.links?.get?.(input.link);
     return link?.type ?? "*";
 };
+function installSelectedIndex(n) {
+    const widget = n.widgets?.find(item => item.name === "selected_index");
+    if (!widget) return;
+    const callback = widget.callback;
+    widget.callback = function () {
+        n.properties ??= {};
+        n.properties.usefulstuff_index_revision = (n.properties.usefulstuff_index_revision ?? 0) + 1;
+        return callback?.apply(this, arguments);
+    };
+    const onExecuted = n.onExecuted;
+    n.onExecuted = function (message) {
+        onExecuted?.apply(this, arguments);
+        const index = message?.selected_index?.at(-1);
+        if (!Number.isInteger(index) || index < 1 || index > MAX) return;
+        // Assign directly: invoking the edit callback would restart the cycle.
+        widget.value = index;
+        app.graph?.setDirtyCanvas?.(true, true);
+    };
+}
 function normalizeAny(n) {
     let xs = entries(n, "any_");
     if (!xs.length) add(n, "any_1", "*");
@@ -154,6 +173,7 @@ app.registerExtension({
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function() {
             const result = onNodeCreated?.apply(this, arguments);
+            if (nodeData.name === ANY) installSelectedIndex(this);
             if (nodeData.name === ANY) install(this, normalizeAny, (x,d) => restore(x,d,["any_"], (node,i) => add(node, `any_${i}`, "*")), node => removeInputs(node, ["any_"]));
             if (nodeData.name === PAIRS) install(this, normalizePairs, (x,d) => restore(x,d,["image_", "text_"], addPair), node => removeInputs(node, ["image_", "text_"]));
             if (nodeData.name === MATCH_ROUTER) installRouter(this);
