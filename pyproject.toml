@@ -2,7 +2,7 @@
 [project]
 name = "comfyui-usefulstuffnodes"
 description = "Utility ComfyUI custom nodes that add some extra features for your workflows (random int for cli runs, unix timestamp, boolean random, string match switch, etc)."
-version = "0.1.9"
+version = "0.1.10"
 license = { text = "MIT" }
 dependencies  = []
 
@@ -12,3 +12,4 @@ Repository = "https://github.com/ArtemKo7v/ComfyUI-UsefulStuffNodes"
 [tool.comfy]
 PublisherId = "artemko7v"
 DisplayName = "ComfyUI Useful Stuff Nodes"
+Icon = "https://raw.githubusercontent.com/ArtemKo7v/ComfyUI-UsefulStuffNodes/main/images/icon.png"
