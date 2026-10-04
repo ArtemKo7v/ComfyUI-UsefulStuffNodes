@@ -1,20 +1,112 @@
-name: Publish to Comfy registry
+name: Test and publish to Comfy registry
+
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-    paths:
-      - "pyproject.toml"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
-  publish-node:
-    name: Publish Custom Node to registry
-    runs-on: ubuntu-latest
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
-      - name: Publish Custom Node
-        uses: Comfy-Org/publish-node-action@main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - name: Run Python tests
+        run: python -B -m unittest discover -s tests -v
+      - name: Run frontend tests
+        run: node --test tests/*.test.cjs
+
+  check-version:
+    name: Check publication version
+    needs: test
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Python for version comparison
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+      - name: Check whether the version changed
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        shell: python
+        run: |
+          import os
+          import subprocess
+          import tomllib
+          from pathlib import Path
+
+          current = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+          previous = None
+          before = os.environ["PUSH_BEFORE"]
+          if os.environ["EVENT_NAME"] == "push" and before != "0" * 40:
+              files = subprocess.check_output(["git", "ls-tree", "--name-only", before, "--", "pyproject.toml"], text=True)
+              if files.strip():
+                  old_project = subprocess.check_output(["git", "show", f"{before}:pyproject.toml"], text=True, encoding="utf-8")
+                  previous = tomllib.loads(old_project)["project"]["version"]
+          publish = os.environ["EVENT_NAME"] == "workflow_dispatch" or current != previous
+          print(f"Version: {previous} -> {current}. Publish: {publish}")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"publish={str(publish).lower()}\n")
+
+  publish-node:
+    name: Publish Custom Node to registry
+    needs: [test, check-version]
+    if: needs.check-version.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    concurrency:
+      group: comfy-registry-publish
+      cancel-in-progress: false
+    steps:
+      - name: Check out code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check registry token
+        env:
+          COMFY_REGISTRY_TOKEN: ${{ secrets.COMFY_REGISTRY_TOKEN }}
+        run: |
+          if [[ -z "$COMFY_REGISTRY_TOKEN" ]]; then
+            echo "::error::Set the COMFY_REGISTRY_TOKEN repository secret before publishing."
+            exit 1
+          fi
+      - name: Publish Custom Node
+        uses: Comfy-Org/publish-node-action@d2366e7abb6ab16f3bb03e3520ae25c8cf749bc9 # main
+        with:
+          skip_checkout: "true"
           personal_access_token: ${{ secrets.COMFY_REGISTRY_TOKEN }}
