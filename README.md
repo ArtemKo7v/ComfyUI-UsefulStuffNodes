@@ -11,8 +11,8 @@ Utility ComfyUI custom nodes that add a few small helpers for workflows.
 - **String Match Switch** — passes through the first connected option whose control string exactly equals `match`; otherwise it returns the required `default` input. Connecting an option adds the next option/control pair. Disconnected options never participate. The UI expands as needed, up to 63 selectable options.
 - **Any Input Selector** — selects one of up to 64 connected inputs. Modes: `fixed` (by index, starting at 1), `random`, and cycling `increment` / `decrement`. After execution, `selected_index` shows the selected input; editing it restarts the cycle from that position.
 - **Any Match Router** — sends one input value to the first any_out_N whose text_N exactly equals match. Filling the last text field adds the next text/output pair. If nothing matches, every output is None.
-- **Any Switch** — routes one input to output 1 when enabled is true, otherwise to output 2.
-- **Any If Else** — returns input 1 when condition is true, otherwise input 2.
+- **Any Switch** — routes `any` to `out_true` when `enabled` is true, otherwise to `out_false`.
+- **Any If Else** — returns `in_true` when `condition` is true, otherwise `in_false`.
 
 The `last_value` widget is a read-only native value: `INT` for integer nodes and `BOOLEAN` for Boolean Random. On a newly created node, the initial saved value is `0` for integer nodes and `false` for Boolean Random.
 

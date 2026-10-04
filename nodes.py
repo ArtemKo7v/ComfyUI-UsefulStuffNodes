@@ -306,7 +306,7 @@ class ArtemKo7vUsefulStuffNodesAnyMatchRouter:
 class ArtemKo7vUsefulStuffNodesAnySwitch:
     CATEGORY = "ArtemKo7v"
     RETURN_TYPES = ("*", "*")
-    RETURN_NAMES = ("any_out_1", "any_out_2")
+    RETURN_NAMES = ("out_true", "out_false")
     FUNCTION = "switch"
 
     @classmethod
@@ -336,8 +336,8 @@ class ArtemKo7vUsefulStuffNodesAnyIfElse:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "any_1": ("*",),
-                "any_2": ("*",),
+                "in_true": ("*",),
+                "in_false": ("*",),
                 "condition": ("BOOLEAN", {"default": True}),
             }
         }
@@ -346,8 +346,8 @@ class ArtemKo7vUsefulStuffNodesAnyIfElse:
     def VALIDATE_INPUTS(cls, input_types):
         return True
 
-    def select(self, any_1, any_2, condition):
-        return (any_1 if condition else any_2,)
+    def select(self, in_true, in_false, condition):
+        return (in_true if condition else in_false,)
 
 
 NODE_CLASS_MAPPINGS = {
